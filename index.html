@@ -1,0 +1,198 @@
+<!doctype html>
+<html>
+<head>h
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.1.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.1.0/js/bootstrap.min.js"></script>
+</head>
+
+<body>
+    <div id="loginbox" style="margin-top:50px;" class="mainbox col-md-6 col-md-offset-3 col-sm-8 col-sm-offset-2">
+        <div class="panel panel-info" >
+            <div class="panel-heading">
+               <p>Github Login</p>
+            </div>
+            <div style="padding-top:30px" class="panel-body" >
+               <div style="margin-bottom: 25px" class="input-group col-6">
+                   <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+                   <input id="login_username" type="text" class="form-control" name="username" value="" placeholder="username">
+               </div>
+               <!-- <div style="margin-bottom: 25px" class="input-group col-6">
+                   <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+                   <input id="login_password" type="password" class="form-control" name="password" value="" placeholder="password">
+               </div> -->
+               <div class="input-group">
+                   <div style="margin-top:10px" class="form-group">
+                       <div class="controls">
+                         <a id="btn_login" href="#" class="btn btn-success">Get Repo</a>
+                       </div>
+                   </div>
+               </div>
+            </div>
+        </div>
+        <div id="ghapidata" class="clearfix">
+          <table class="table repo_table">
+              <thead class="blue-grey lighten-4">
+                  <tr>
+                      <th scope="col">#</th>
+                      <th scope="col">Repository</th>
+                      <th scope="col">Action</th>
+                  </tr>
+              </thead>
+              <tbody>
+              </tbody>
+          </table>
+        </div>
+        <script id="repo_tmp" type="text/template">
+            <tr>
+                <td class="row"></td>
+                <td class="repo"></td>
+                <td class="action"></td>
+            </tr>
+        </script>
+        <div id="myModal" class="modal fade" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Create Issue</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div style="margin-bottom: 25px" class="input-group col-6">
+                            <span class="input-group-addon"><i class=""></i></span>
+                            <input id="issue_title" type="text" class="form-control" name="title" value="" placeholder="title">
+                        </div>
+                        <div style="margin-bottom: 25px" class="input-group col-6">
+                            <span class="input-group-addon"><i class=""></i></span>
+                            <input id="issue_body" type="text" class="form-control" name="body" value="" placeholder="description">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                    <button type="button" data-toggle="modal" data-target="#pwdModal" class="btn btn-primary update-issue">Update</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+
+                    <div id="pwdModal" class="modal fade" role="dialog">
+                        <div class="modal-dialog" style="margin: 0; height: 100%">
+                            <div class="modal-content" style="">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                    <h4 class="modal-title">Github Password</h4>
+                                </div>
+                                <div class="modal-body">
+                                    <div style="margin-bottom: 25px" class="input-group col-6">
+                                        <span class="input-group-addon"></span>
+                                        <input id="login_password" type="password" class="form-control" name="password" value="" placeholder="password">
+                                    </div>
+                                </div>
+                                <div class="modal-footer" style="margin-top: 75px">
+                                    <button type="button" onClick="submitIssueToRepo()" class="btn btn-primary submit-issue">Submit</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script type="text/javascript">
+    var repoData = {};
+
+    function renderRepoResponse(response) {
+        //console.log(response);
+        repoData.response = {};
+
+        if (response.length) {
+            var repoTable = $('.repo_table'),
+                repoTableRows = repoTable.find('tbody');
+            _.each(response, function(repo, index) {
+                var rowTemplate = $($('#repo_tmp').html()).clone();
+
+                repoData.response[repo.id] = repo;
+                rowTemplate.attr("data-id", repo.id);
+                rowTemplate.find('td.row').html(index + 1);
+                rowTemplate.find('td.repo').html('<a href="'+repo.svn_url+'" target="_blank">'+repo.svn_url+'</a>');
+                rowTemplate.find('td.action').html('<button type="button" onClick="selectedRepo('+repo.id+')" data-toggle="modal" data-target="#myModal" class="btn btn-primary create-issue">New Issue</button>');
+
+                repoTableRows.append(rowTemplate);
+            });
+        }
+    }
+
+    function selectedRepo(repoId) {
+        repoData.selectedRepoId = repoId;
+    }
+
+    function submitIssueToRepo() {
+        var repoPassword = $('#login_password').val(),
+            selectedRepo = repoData.response[repoData.selectedRepoId];
+
+        console.log(btoa(repoData.userName+":"+repoPassword), repoData.userName+":"+repoPassword);
+        $.ajax({
+            url: 'https://api.github.com/authorizations',
+            type: 'POST',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader("Authorization", "Basic " + btoa(repoData.userName+":"+repoPassword));
+            },
+            data: '{"scopes":["repo"]}'
+        }).done(function(response) {
+            $.ajax({
+                url: 'https://api.github.com/repos/'+selectedRepo.owner.login+'/'+selectedRepo.name+'/issues',
+                type: 'POST',
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader("Authorization", "token " + response.token);
+                },
+                data: JSON.stringify({
+                    "title": $('#issue_title').val(),
+                    "body": $('#issue_body').val(),
+                    "assignees": [
+                        selectedRepo.owner.login
+                    ],
+                    "milestone": 1,
+                    "labels": [
+                        "bug"
+                    ]
+                })
+            })
+            .done(successResponse)
+            .fail(failResponse);
+        });
+    }
+
+    function successResponse(response) {
+        console.log(response);
+    }
+
+    function failResponse(response) {
+        console.log(response);
+    }
+
+    $(document).ready(function() {
+        $('#btn_login').on('click', function(e) {
+            e.preventDefault();
+
+            var username = $('#login_username').val();
+
+
+            repoData.userName = username;
+
+            $.ajax({
+                url: 'https://api.github.com/users/'+username+'/repos',
+                complete: function(xhr) {
+                    renderRepoResponse(xhr.responseJSON);
+                }
+            });
+
+        });
+
+        $('.create-issue').on('click', function(e) {
+            e.preventDefault();
+
+        });
+    });
+</script>
+</body>
+</html>
